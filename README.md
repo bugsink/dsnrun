@@ -19,7 +19,6 @@ Usage: dsnrun [dsn] [-m module | filename] [args...]
 To use this, just rewrite your python invocations, i.e.
 
 ```
-#!bash
 # normal Python
 $ python -m failingmodule
 [..stacktrace..]
@@ -29,7 +28,6 @@ $ dsnrun -m failingmodule
 ```
 
 ```
-#!bash
 # normal Python
 $ python /tmp/failingmodule.py
 [..stacktrace..]

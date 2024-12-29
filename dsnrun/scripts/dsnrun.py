@@ -7,23 +7,31 @@ import sentry_sdk
 
 
 def hide_dsnrun(event, hint):
-    # TODO wrap w/ try/except: we never want to crash the app because of this
-    # TODO what if _not_ found? i.e. when there's no break reached?
+    # We hide the dsnrun (and associated) frames from the stacktrace. This makes it so that the stacktrace as it shows
+    # up in your error-tracker is the same as if you ran the script directly.
+    #
+    # NOTE: an alternative solution is to wrap a try/catch around the run_module/run_path calls and do a
+    # capture_exception from there; that would perhaps also be a good way to ensure that the on-screen error message
+    # matches the "run script directly" error message.
 
-    # alternatively: prune while catching the exception (explicitly).
-    # this way we can also keep the stacktrace as it was w/o our own frames.
+    try:
+        stacktrace = event["exception"]["values"][-1]["stacktrace"]
+        frames = stacktrace["frames"]
 
-    stacktrace = event["exception"]["values"][-1]["stacktrace"]
-    frames = stacktrace["frames"]
+        seen = False
+        for i, frame in enumerate(frames):
+            if frame["filename"] == "runpy.py":
+                seen = True
+            if seen and frame["filename"] != "runpy.py":
 
-    seen = False
-    for i, frame in enumerate(frames):
-        if frame["filename"] == "runpy.py":
-            seen = True
-        if seen and frame["filename"] != "runpy.py":
-            break
+                # if we have seen the runpy.py frame, and the next frame is not runpy.py, we can remove the frames
+                # before that.
+                stacktrace["frames"] = stacktrace["frames"][i:]
+                break
 
-    stacktrace["frames"] = stacktrace["frames"][i:]
+    except Exception as e:
+        print(f"Failed to remove dsnrun frames: {e}")
+
     return event
 
 
@@ -53,6 +61,7 @@ def main():
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         before_send=hide_dsnrun,
+
         # "<run_path>" is the module name of the main script when we run it runpy.run_path. It's safe to say it should
         # be in_app, because it's the very thing we care about.
         # when we run with -m (runpy.run_module), the module is "__main__", but we don't need to add that to the
@@ -67,7 +76,7 @@ def main():
         runpy.run_module(module, run_name="__main__")
     else:
         sys.argv = [arg] + args
-        runpy.run_path(arg)
+        runpy.run_path(arg, run_name="__main__")
 
 
 if __name__ == "__main__":

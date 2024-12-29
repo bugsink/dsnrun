@@ -8,9 +8,10 @@ import sentry_sdk
 
 def hide_dsnrun(event, hint):
     # TODO wrap w/ try/except: we never want to crash the app because of this
-    # TODO what if _not_ found?
-    # alternatively: prune while catching the exception (explicitly)
-    # event['exception']['values'][1]['stacktrace']['frames']
+    # TODO what if _not_ found? i.e. when there's no break reached?
+
+    # alternatively: prune while catching the exception (explicitly).
+    # this way we can also keep the stacktrace as it was w/o our own frames.
 
     stacktrace = event["exception"]["values"][-1]["stacktrace"]
     frames = stacktrace["frames"]
@@ -26,18 +27,18 @@ def hide_dsnrun(event, hint):
     return event
 
 
-def _safe_pop(args, msg):
+def _safe_pop(args, failure_msg):
     try:
         return args.pop(0)
     except IndexError:
-        print(msg)
+        print(failure_msg)
         sys.exit(1)
 
 
 def main():
-    args = sys.argv[1:]  # we don't need the script name
+    args = sys.argv[1:]  # remove the script name
 
-    if len(args) == 0:
+    if len(args) == 0 or args[0] in ("-h", "--help"):
         print("Usage: dsnrun [dsn] [-m module | filename] [args...]")
         sys.exit(1)
 
@@ -52,7 +53,11 @@ def main():
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         before_send=hide_dsnrun,
-        in_app_include=["<run_path>"],  # this is the module name of the main script after we run it w/ runpy (is it for the -m case?)
+        # "<run_path>" is the module name of the main script when we run it runpy.run_path. It's safe to say it should
+        # be in_app, because it's the very thing we care about.
+        # when we run with -m (runpy.run_module), the module is "__main__", but we don't need to add that to the
+        # in_app_include list, because the sentry_sdk will automatically pick it up with that name.
+        in_app_include=["<run_path>"],
     )
 
     arg = _safe_pop(args, "No module or filename provided.")

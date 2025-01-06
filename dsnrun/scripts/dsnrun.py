@@ -62,11 +62,9 @@ def main():
         dsn=SENTRY_DSN,
         before_send=hide_dsnrun,
 
-        # "<run_path>" is the module name of the main script when we run it runpy.run_path. It's safe to say it should
-        # be in_app, because it's the very thing we care about.
-        # when we run with -m (runpy.run_module), the module is "__main__", but we don't need to add that to the
-        # in_app_include list, because the sentry_sdk will automatically pick it up with that name.
-        in_app_include=["<run_path>"],
+        # the module is "__main__" as per run_name below;
+        # It's safe to it should be in_app, because it is the very thing we care about.
+        in_app_include=["__main__"],
     )
 
     arg = _safe_pop(args, "No module or filename provided.")

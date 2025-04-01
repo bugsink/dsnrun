@@ -13,7 +13,7 @@ authors = [
 description = "Run arbirary scripts with sentry_sdk initialized to some DSN on the fly"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "BSD-3-Clause"}
+license = "BSD-3-Clause"
 classifiers = [
     "Programming Language :: Python :: 3",
 ]
